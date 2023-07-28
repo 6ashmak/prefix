@@ -1,0 +1,42 @@
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	if (preg_match("#cache=['\"](\d+)(S|M|H|D)['\"]#i", $param_str, $custom_cache)) {
+		$lt = strtoupper($custom_cache[2]);
+		$lifetime = array(
+			'S' => 1,
+			'M' => 60,
+			'H' => 3600,
+			'D' => 86400,
+		);
+		$timelim = $custom_cache[1] * $lifetime[$lt];
+		$param_str = preg_replace("#category=['\"]current#i", "category='$category_id", $param_str);
+		$build_navigation && $param_str .= ' cstart=' . $cstart;
+		$param_str .= ' group=' . $member_id['user_group'];
+		$custom_cache_path = ENGINE_DIR . '/cache_custom/' . md5($param_str) . '.tmp';
+		$cstart > 10 && $custom_cache_path = false;
+		if (file_exists($custom_cache_path) && filemtime($custom_cache_path) > $_TIME - $timelim) {
+
+			$cache_data = file_get_contents($custom_cache_path);
+			$content = json_decode($cache_data, true);
+			if (is_array($content)) {
+				if ($content['navigation']) {
+					if (!defined('CUSTOMNAVIGATION')) {
+						define('CUSTOMNAVIGATION', true);
+						$custom_navigation = $content['navigation'];
+					}
+				}
+				return $content['content'];
+			}
+		}
+	} else {
+		$custom_cache_path = false;
+	}
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		if ($custom_cache_path) {
+			$custom_news && file_put_contents($custom_cache_path, json_encode( array('content' => $tpl->result['content'], 'navigation' => $tpl->result['navigation'] ) , JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES ), LOCK_EX);
+			$config['allow_cache'] = $allow_cache;
+            $row = $save_row;
+			return $tpl->result['content'];
+		}
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////
